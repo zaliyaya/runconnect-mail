@@ -3,6 +3,7 @@ name: Почта в Телеграм
 on:
   schedule:
     - cron: "*/5 * * * *"  # каждые 5 минут (GitHub иногда запускает с задержкой)
+    - cron: "17 4 1 * *"   # раз в месяц: коммит-keepalive, чтобы GitHub не отключил расписание
   workflow_dispatch:
     inputs:
       test:
@@ -46,8 +47,11 @@ jobs:
         run: |
           git config user.name "mail-bot"
           git config user.email "mail-bot@users.noreply.github.com"
-          [ -f state.json ] || exit 0
-          git add state.json
+          if [ "${{ github.event.schedule }}" = "17 4 1 * *" ]; then
+            date -u +%Y-%m-%dT%H:%M:%SZ > keepalive.txt  # активность, чтобы GitHub не выключил расписание
+            git add keepalive.txt
+          fi
+          [ -f state.json ] && git add state.json
           git diff --cached --quiet && exit 0
           git commit -m "Обновлён state.json"
           for i in 1 2 3; do git pull --rebase && git push && exit 0; sleep 5; done
